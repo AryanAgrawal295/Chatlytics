@@ -9,7 +9,9 @@ import mongoose from "mongoose"
 
 async function connectDB() {
   if (mongoose.connection.readyState === 0) {
-    await mongoose.connect(process.env.MONGODB_URI!)
+    await mongoose.connect(process.env.MONGODB_URI!, {
+      serverSelectionTimeoutMS: 5000,
+    })
   }
 }
 
@@ -29,6 +31,16 @@ export async function POST(req: NextRequest) {
     // ── Phase 1: Pre-chunk to get raw text blocks for tagging ─────────────
     // We do a rough split first to tag, then proper semantic chunk with tags
     const lines = parseLines(transcript)
+    if (lines.length === 0) {
+      return NextResponse.json(
+        {
+          error:
+            "No speaker-attributed chat lines were found. Use lines like 'Customer: message' or '[date, time] Name: message'.",
+        },
+        { status: 400 }
+      )
+    }
+
     const roughChunks: string[] = []
     let buffer = ""
 
@@ -57,8 +69,7 @@ export async function POST(req: NextRequest) {
       smartChunks.map((c) => c.contextualText)
     )
 
-    // ── Phase 5: Upsert to Pinecone with full metadata ────────────────────
-    const index = getPineconeIndex()
+    // ── Phase 5: Upsert vectors with full metadata ────────────────────────
     const vectors = smartChunks.map((chunk, i) => ({
       id: chunk.id,
       values: embeddings[i],
@@ -78,21 +89,30 @@ export async function POST(req: NextRequest) {
       },
     }))
 
-    // Pinecone batch upsert (max 100 per batch)
+    const index = getPineconeIndex()
     const BATCH = 100
     for (let i = 0; i < vectors.length; i += BATCH) {
       await index.upsert(vectors.slice(i, i + BATCH))
     }
 
     // ── Phase 6: Save metadata to MongoDB ─────────────────────────────────
-    await connectDB()
-    await TranscriptModel.create({
-      transcriptId,
-      userId,
-      rawText: transcript,
-      chunkCount: smartChunks.length,
-      fileName: fileName || "pasted_transcript",
-    })
+    // Local previews should still be able to analyze after vectors are stored,
+    // even when Atlas rejects the developer machine's current IP.
+    let metadataWarning: string | undefined
+    try {
+      await connectDB()
+      await TranscriptModel.create({
+        transcriptId,
+        userId,
+        rawText: transcript,
+        chunkCount: smartChunks.length,
+        fileName: fileName || "pasted_transcript",
+      })
+    } catch (error) {
+      metadataWarning =
+        "Transcript vectors were stored, but MongoDB metadata was not saved."
+      console.warn("[INGEST METADATA WARNING]", error)
+    }
 
     return NextResponse.json({
       success: true,
@@ -100,6 +120,7 @@ export async function POST(req: NextRequest) {
       chunkCount: smartChunks.length,
       emotionsDetected: [...new Set(smartChunks.map((c) => c.emotion))],
       intentsDetected: [...new Set(smartChunks.map((c) => c.intent))],
+      warning: metadataWarning,
     })
   } catch (error) {
     console.error("[INGEST ERROR]", error)

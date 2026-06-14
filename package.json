@@ -9,6 +9,7 @@
     "typecheck": "tsc --noEmit -p tsconfig.typecheck.json"
   },
   "dependencies": {
+    "@google/genai": "^2.8.0",
     "@google/generative-ai": "^0.24.1",
     "@pinecone-database/pinecone": "^4.1.0",
     "mongoose": "^8.9.5",

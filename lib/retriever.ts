@@ -1,10 +1,7 @@
 import { embedText } from "./embedder"
 import { getPineconeIndex } from "./pinecone"
 import { RetrievedChunk, ConversationIntent, EmotionLabel } from "@/types/rag"
-import { GoogleGenerativeAI } from "@google/generative-ai"
-
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!)
-const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" })
+import { generateText } from "./gemini"
 
 // ── 1. Detect what kind of question was asked ──────────────────────────────
 // Used to BOOST chunks matching the question's intent
@@ -20,8 +17,7 @@ Respond with ONLY the category word, nothing else.
 `.trim()
 
   try {
-    const result = await model.generateContent(prompt)
-    const raw = result.response.text().trim().toLowerCase() as ConversationIntent
+    const raw = (await generateText(prompt)).trim().toLowerCase() as ConversationIntent
     const valid: ConversationIntent[] = [
       "complaint", "query", "resolution", "escalation",
       "confirmation", "chitchat", "feedback", "unknown"
@@ -59,8 +55,7 @@ Example: [8, 3, 9, 1, 6]
 `.trim()
 
   try {
-    const result = await model.generateContent(prompt)
-    const raw = result.response.text().replace(/```json|```/g, "").trim()
+    const raw = (await generateText(prompt)).replace(/```json|```/g, "").trim()
     const scores: number[] = JSON.parse(raw)
 
     return chunks.map((chunk, i) => ({
@@ -96,7 +91,7 @@ export async function retrieveAndRank(
   const index = getPineconeIndex()
   const results = await index.query({
     vector: queryVector,
-    topK: topK * 3, // fetch 15 if topK=5, re-ranker will cut to 5
+    topK: topK * 3,
     includeMetadata: true,
     filter: {
       transcriptId: { $eq: transcriptId },
@@ -104,10 +99,7 @@ export async function retrieveAndRank(
     },
   })
 
-  if (!results.matches || results.matches.length === 0) return []
-
-  // Step D: Map Pinecone results to RetrievedChunk type
-  let chunks: RetrievedChunk[] = results.matches.map((match) => ({
+  let chunks: RetrievedChunk[] = (results.matches || []).map((match) => ({
     text: (match.metadata?.text as string) || "",
     contextualText: (match.metadata?.contextualText as string) || "",
     speakers: (match.metadata?.speakers as string[]) || [],
@@ -119,6 +111,8 @@ export async function retrieveAndRank(
     isEscalation: Boolean(match.metadata?.isEscalation),
     semanticScore: match.score || 0,
   }))
+
+  if (chunks.length === 0) return []
 
   // Step E: INTENT BOOST
   // Chunks matching the question's intent get a score bump

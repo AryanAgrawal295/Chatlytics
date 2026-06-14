@@ -2,8 +2,9 @@ import { v4 as uuidv4 } from "uuid"
 import { SmartChunk } from "@/types/rag"
 import { ChunkTags } from "./tagger"
 
-// Matches: "John: text", "[10:32] Alice: text", "Customer: text"
-const SPEAKER_REGEX = /^(\[?[\d:aApPmM\s]+\]?\s*)?([A-Za-z][A-Za-z\s]{0,30}):\s*(.+)$/
+// Matches: "John: text", "[10:32] Alice: text",
+// "[16/06/25, 11:08:40 PM] Aryan Agrawal: text", "+91 99999 99999: text"
+const SPEAKER_REGEX = /^(?:\[[^\]]+\]\s*)?([^:\n]{1,80}):\s*(.+)$/
 
 type ParsedLine = {
   speaker: string
@@ -20,8 +21,8 @@ export function parseLines(transcript: string): ParsedLine[] {
     const match = raw[i].match(SPEAKER_REGEX)
     if (match) {
       lines.push({
-        speaker: match[2].trim(),
-        text: match[3].trim(),
+        speaker: match[1].trim(),
+        text: match[2].trim(),
         lineIndex: i,
       })
     } else if (lines.length > 0) {

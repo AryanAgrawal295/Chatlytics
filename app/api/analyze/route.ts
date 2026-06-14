@@ -1,10 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
-import { GoogleGenerativeAI } from "@google/generative-ai"
 import { retrieveAndRank } from "@/lib/retriever"
 import { buildAnalysisPrompt } from "@/lib/promptBuilder"
-
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!)
-const gemini = genAI.getGenerativeModel({ model: "gemini-1.5-flash" })
+import { generateText } from "@/lib/gemini"
 
 export async function POST(req: NextRequest) {
   try {
@@ -31,8 +28,7 @@ export async function POST(req: NextRequest) {
     const prompt = buildAnalysisPrompt(question, chunks)
 
     // ── Step 3: Generate answer ────────────────────────────────────────────
-    const result = await gemini.generateContent(prompt)
-    const answer = result.response.text()
+    const answer = await generateText(prompt)
 
     // ── Step 4: Return answer with debug metadata ──────────────────────────
     return NextResponse.json({

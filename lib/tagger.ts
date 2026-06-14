@@ -1,8 +1,5 @@
-import { GoogleGenerativeAI } from "@google/generative-ai"
 import { ConversationIntent, EmotionLabel } from "@/types/rag"
-
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!)
-const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" })
+import { generateText } from "./gemini"
 
 export type ChunkTags = {
   intent: ConversationIntent
@@ -69,8 +66,7 @@ Respond with exactly this JSON structure:
 `.trim()
 
   try {
-    const result = await model.generateContent(prompt)
-    const raw = result.response.text()
+    const raw = await generateText(prompt)
     return safeParse(raw)
   } catch {
     return {

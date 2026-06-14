@@ -1,16 +1,20 @@
-import { GoogleGenerativeAI } from "@google/generative-ai"
+import { GoogleGenAI } from "@google/genai"
 
-const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY!)
-
-// text-embedding-004: 768-dim, best free option, context-aware
-const embeddingModel = genAI.getGenerativeModel({
-  model: "text-embedding-004",
+const ai = new GoogleGenAI({
+  apiKey: process.env.GEMINI_API_KEY!,
 })
 
 // Embed a single text (used for query embedding at retrieval time)
 export async function embedText(text: string): Promise<number[]> {
-  const result = await embeddingModel.embedContent(text)
-  return result.embedding.values
+  const response = await ai.models.embedContent({
+    model: "gemini-embedding-2",
+    contents: text,
+    config: {
+      outputDimensionality: 768,
+    },
+  })
+
+  return response.embeddings![0].values!
 }
 
 // Embed the CONTEXTUAL text of each chunk
@@ -24,7 +28,6 @@ export async function embedChunks(
   for (const text of contextualTexts) {
     const embedding = await embedText(text)
     embeddings.push(embedding)
-    // 150ms delay — stays within Gemini free tier limits
     await new Promise((r) => setTimeout(r, 150))
   }
 
