@@ -1,6 +1,7 @@
 "use client"
 
 import { ChangeEvent, FormEvent, useMemo, useState } from "react"
+import { BotBuilder } from "./BotBuilder"
 
 type Tab = "analysis" | "builder"
 
@@ -223,45 +224,7 @@ export function Workspace() {
           </div>
         </section>
       ) : (
-        <section className="builder-grid">
-          <div className="panel">
-            <div className="panel-heading">
-              <div>
-                <h2>Bot Builder</h2>
-                <p>Template setup placeholder</p>
-              </div>
-            </div>
-            <div className="builder-form">
-              <label>
-                Template
-                <select defaultValue="support">
-                  <option value="support">Customer Support</option>
-                  <option value="sales">Sales Assistant</option>
-                  <option value="feedback">Feedback Collector</option>
-                </select>
-              </label>
-              <label>
-                Bot name
-                <input placeholder="Retention Analyst" />
-              </label>
-              <label>
-                Instructions
-                <textarea placeholder="Describe how this bot should respond..." />
-              </label>
-            </div>
-          </div>
-          <div className="panel">
-            <div className="panel-heading">
-              <div>
-                <h2>Test Chat</h2>
-                <p>Coming after analysis flow is stable</p>
-              </div>
-            </div>
-            <div className="answer-box">
-              <p className="muted">Bot testing can be connected once templates are saved.</p>
-            </div>
-          </div>
-        </section>
+        <BotBuilder />
       )}
 
       {(status || error) && (
