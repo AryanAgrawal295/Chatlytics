@@ -57,24 +57,32 @@ export async function POST(req: NextRequest) {
       recentConversation
     )
     if (validationProblems.length > 0) {
-      const correctionPrompt = buildReplyCorrectionPrompt(
-        prompt,
-        reply,
-        validationProblems
-      )
-      const correctedReply = (
-        await generateText(correctionPrompt, { temperature: 0.75 })
-      ).trim()
-      const correctionProblems = validateBotReply(
-        correctedReply,
-        message,
-        recentConversation
-      )
+      try {
+        const correctionPrompt = buildReplyCorrectionPrompt(
+          prompt,
+          reply,
+          validationProblems
+        )
+        const correctedReply = (
+          await generateText(correctionPrompt, { temperature: 0.75 })
+        ).trim()
+        const correctionProblems = validateBotReply(
+          correctedReply,
+          message,
+          recentConversation
+        )
 
-      if (correctedReply && correctionProblems.length < validationProblems.length) {
-        reply = correctedReply
-      } else {
-        throw new Error("The model could not produce a coherent non-repetitive reply")
+        if (
+          correctedReply &&
+          correctionProblems.length <= validationProblems.length
+        ) {
+          reply = correctedReply
+        }
+      } catch (correctionError) {
+        console.warn(
+          "[BOT CHAT WARNING] Correction unavailable; returning first generated reply",
+          correctionError
+        )
       }
     }
 

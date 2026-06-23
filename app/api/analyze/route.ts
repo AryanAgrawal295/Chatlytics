@@ -3,6 +3,15 @@ import { retrieveAndRank } from "@/lib/retriever"
 import { buildAnalysisPrompt } from "@/lib/promptBuilder"
 import { generateText } from "@/lib/gemini"
 
+function cleanAnswerPrefix(answer: string): string {
+  return answer
+    .trim()
+    .replace(
+      /^based on (?:the )?(?:provided )?(?:conversation )?(?:segments|context)(?: provided)?\s*[:,.-]?\s*/i,
+      ""
+    )
+}
+
 export async function POST(req: NextRequest) {
   try {
     const { question, transcriptId, userId } = await req.json()
@@ -28,7 +37,7 @@ export async function POST(req: NextRequest) {
     const prompt = buildAnalysisPrompt(question, chunks)
 
     // ── Step 3: Generate answer ────────────────────────────────────────────
-    const answer = await generateText(prompt)
+    const answer = cleanAnswerPrefix(await generateText(prompt))
 
     // ── Step 4: Return answer with debug metadata ──────────────────────────
     return NextResponse.json({

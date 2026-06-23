@@ -50,5 +50,6 @@ Instructions for your answer:
 3. Note emotional signals if they're relevant to the question
 4. If a resolution or escalation was detected, address it
 5. Be concise but complete — no filler sentences
+6. Start directly with the answer. Never begin with "Based on the provided conversation segments" or a similar preface
 `.trim()
 }

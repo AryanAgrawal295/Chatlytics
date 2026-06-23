@@ -163,6 +163,8 @@ export function validateBotReply(
   const reasons: string[] = []
   const normalizedReply = normalizedForComparison(reply)
   const normalizedIncoming = normalizedForComparison(incomingMessage)
+  const incomingWords = normalizedIncoming.split(" ").filter(Boolean).length
+  const replyWords = normalizedReply.split(" ").filter(Boolean).length
   const recentReplies = conversation
     .filter((message) => message.sender === "bot")
     .slice(-8)
@@ -171,14 +173,19 @@ export function validateBotReply(
   if (!normalizedReply) reasons.push("The reply is empty.")
   if (
     normalizedReply === normalizedIncoming ||
-    similarity(normalizedReply, normalizedIncoming) >= 0.82
+    (incomingWords >= 4 &&
+      replyWords >= 4 &&
+      similarity(normalizedReply, normalizedIncoming) >= 0.9)
   ) {
     reasons.push("The draft echoes the other person's message instead of answering it.")
   }
   if (
     recentReplies.some(
       (previous) =>
-        previous === normalizedReply || similarity(previous, normalizedReply) >= 0.78
+        previous === normalizedReply ||
+        (previous.split(" ").length >= 4 &&
+          replyWords >= 4 &&
+          similarity(previous, normalizedReply) >= 0.9)
     )
   ) {
     reasons.push("The draft repeats a recent bot reply or the same action phrase.")
@@ -192,22 +199,22 @@ export function validateBotReply(
     reasons.push("The latest message is a greeting, but the draft does not greet back.")
   }
 
+  const recentTopicContext = [
+    ...conversation
+      .filter((message) => message.sender === "user")
+      .slice(-4)
+      .map((message) => message.text),
+    incomingMessage,
+  ]
+    .map(normalizedForComparison)
+    .join(" ")
   const currentTransportOrMoney =
     /\b(le|la|lunga|launga|aaunga|gaadi|gadi|car|bike|paise|money|cash|trek)\b/.test(
-      normalizedIncoming
+      recentTopicContext
     )
   const staleCommitment = /\b(le|la)\s*(aaunga|aunga|lunga)\b/.test(normalizedReply)
   if (staleCommitment && !currentTransportOrMoney) {
     reasons.push("The draft carries an old transport or money commitment into an unrelated message.")
-  }
-
-  const incomingWords = normalizedIncoming.split(" ").filter(Boolean).length
-  const replyWords = normalizedReply.split(" ").filter(Boolean).length
-  const allowsShortReply = /\b(pakka|done|okay|ok|haan|nahi|yes|no)\b/.test(
-    normalizedIncoming
-  )
-  if (incomingWords >= 3 && replyWords <= 1 && !allowsShortReply) {
-    reasons.push("The draft is too short to meaningfully answer the message.")
   }
 
   return reasons

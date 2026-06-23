@@ -101,11 +101,15 @@ function findCommonPhrases(messages: string[]): string[] {
 }
 
 export function buildStyleProfile(
-  transcript: string,
+  transcripts: string | string[],
   userName: string
 ): StyleProfile {
-  const chat = parseChat(transcript)
-  const messages = selectUserMessages(chat, userName)
+  const chats = (Array.isArray(transcripts) ? transcripts : [transcripts])
+    .map((transcript) => parseChat(transcript))
+    .filter((chat) => chat.length > 0)
+  const messages = chats.flatMap((chat) =>
+    selectUserMessages(chat, userName)
+  )
   if (messages.length < 3) {
     throw new Error(
       "At least 3 messages from the selected user are needed to learn a style."
@@ -146,6 +150,8 @@ export function buildStyleProfile(
     commonPhrases: findCommonPhrases(messages),
     languageMix: detectLanguageMix(messages),
     sampleMessages: [...new Set(messages)].slice(-30),
-    replyExamples: buildReplyExamples(chat, userName),
+    replyExamples: chats
+      .flatMap((chat) => buildReplyExamples(chat, userName))
+      .slice(-120),
   }
 }

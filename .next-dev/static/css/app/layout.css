@@ -106,6 +106,137 @@ h2 {
   max-width: 1180px;
 }
 
+.analysis-workspace {
+  align-items: start;
+  display: grid;
+  grid-gap: 12px;
+  gap: 12px;
+  grid-template-columns: auto minmax(0, 1180px);
+  margin: 0 auto;
+  max-width: 1310px;
+}
+
+.analysis-workspace .analysis-grid {
+  margin: 0;
+  width: 100%;
+}
+
+.transcript-history-button {
+  align-items: center;
+  background: #ffffff;
+  border: 1px solid #cfdbda;
+  border-radius: 7px;
+  color: #245f5a;
+  display: inline-flex;
+  font-size: 13px;
+  font-weight: 700;
+  gap: 8px;
+  justify-content: center;
+  min-height: 42px;
+  padding: 9px 11px;
+  white-space: nowrap;
+}
+
+.transcript-history-button:hover {
+  background: #edf4f3;
+  border-color: #9ebbb7;
+}
+
+.transcript-history-button span {
+  align-items: center;
+  background: #24756f;
+  border-radius: 50%;
+  color: #ffffff;
+  display: inline-flex;
+  font-size: 11px;
+  height: 22px;
+  justify-content: center;
+  min-width: 22px;
+  padding: 0 5px;
+}
+
+.transcript-drawer-backdrop {
+  background: rgba(19, 28, 32, 0.42);
+  border: 0;
+  inset: 0;
+  padding: 0;
+  position: fixed;
+  z-index: 40;
+}
+
+.transcript-drawer {
+  background: #f7f9f9;
+  border-right: 1px solid #cfdad9;
+  bottom: 0;
+  box-shadow: 16px 0 40px rgba(24, 37, 42, 0.18);
+  left: 0;
+  overflow-y: auto;
+  padding: 20px;
+  position: fixed;
+  top: 0;
+  width: min(360px, calc(100vw - 36px));
+  z-index: 41;
+}
+
+.transcript-drawer-header {
+  align-items: flex-start;
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 18px;
+}
+
+.transcript-drawer-header h2 {
+  font-size: 22px;
+  margin-bottom: 0;
+}
+
+.new-transcript-button {
+  width: 100%;
+}
+
+.transcript-session-list {
+  display: grid;
+  grid-gap: 8px;
+  gap: 8px;
+  margin-top: 18px;
+}
+
+.transcript-session {
+  background: #ffffff;
+  border: 1px solid #d7e1e0;
+  border-radius: 7px;
+  color: #25343b;
+  display: grid;
+  grid-gap: 5px;
+  gap: 5px;
+  padding: 12px;
+  text-align: left;
+  width: 100%;
+}
+
+.transcript-session:hover {
+  border-color: #8baaa6;
+}
+
+.transcript-session.active {
+  background: #e8f3f1;
+  border-color: #24756f;
+  box-shadow: inset 3px 0 0 #24756f;
+}
+
+.transcript-session strong {
+  font-size: 14px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.transcript-session span,
+.transcript-session small {
+  color: #6b7a81;
+  font-size: 12px;
+}
+
 .panel {
   background: #ffffff;
   border: 1px solid #dce5e4;
@@ -199,6 +330,47 @@ h2 {
   flex-direction: column;
 }
 
+.query-action-row {
+  display: grid;
+  grid-gap: 10px;
+  gap: 10px;
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.speech-button {
+  align-items: center;
+  background: #eef4f3;
+  border: 1px solid #9ebbb7;
+  border-radius: 7px;
+  color: #1f6660;
+  display: inline-flex;
+  font-weight: 700;
+  gap: 8px;
+  justify-content: center;
+  min-height: 40px;
+  min-width: 132px;
+  padding: 10px 14px;
+  white-space: nowrap;
+}
+
+.speech-button::before {
+  background: currentColor;
+  border-radius: 50%;
+  content: "";
+  height: 8px;
+  width: 8px;
+}
+
+.speech-button:hover:not(:disabled) {
+  background: #e2eeec;
+}
+
+.speech-button.listening {
+  background: #fff0f0;
+  border-color: #c76b6b;
+  color: #a42f2f;
+}
+
 .answer-box {
   background: #f8faf9;
   border: 1px solid #dce5e4;
@@ -212,6 +384,117 @@ h2 {
 
 .answer-box p:last-child {
   margin-bottom: 0;
+}
+
+.analysis-thread {
+  background: #f6f8f8;
+  border-bottom: 1px solid #dce5e4;
+  border-top: 1px solid #dce5e4;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  max-height: 560px;
+  min-height: 390px;
+  overflow-y: auto;
+  padding: 16px;
+  scroll-behavior: smooth;
+}
+
+.analysis-chat-panel {
+  display: grid;
+  grid-template-rows: auto minmax(390px, 1fr) auto;
+  min-height: 670px;
+  overflow: hidden;
+  padding: 0;
+}
+
+.analysis-chat-heading {
+  margin: 0;
+  padding: 18px;
+}
+
+.analysis-composer {
+  background: #ffffff;
+  gap: 10px;
+  margin: 0;
+  padding: 14px;
+}
+
+.analysis-composer .question-input {
+  max-height: 120px;
+  min-height: 54px;
+}
+
+.analysis-empty-state {
+  align-self: center;
+  color: #66757d;
+  margin: auto;
+  max-width: 300px;
+  text-align: center;
+}
+
+.analysis-empty-state strong {
+  color: #34434a;
+  display: block;
+  font-size: 15px;
+  margin-bottom: 6px;
+}
+
+.analysis-empty-state p {
+  font-size: 13px;
+  line-height: 1.5;
+  margin-bottom: 0;
+}
+
+.analysis-message {
+  max-width: 86%;
+}
+
+.analysis-message > span {
+  color: #78868c;
+  display: block;
+  font-size: 11px;
+  margin-bottom: 4px;
+}
+
+.analysis-message p {
+  border-radius: 7px;
+  font-size: 14px;
+  line-height: 1.5;
+  margin: 0;
+  overflow-wrap: anywhere;
+  padding: 10px 12px;
+  white-space: pre-wrap;
+}
+
+.analysis-question {
+  align-self: flex-end;
+}
+
+.analysis-question > span {
+  text-align: right;
+}
+
+.analysis-question p {
+  background: #24756f;
+  color: #ffffff;
+}
+
+.analysis-answer {
+  align-self: flex-start;
+}
+
+.analysis-answer p {
+  background: #ffffff;
+  border: 1px solid #d7e1e0;
+  color: #25343b;
+}
+
+.analysis-thinking {
+  align-self: flex-start;
+  color: #66757d;
+  font-size: 12px;
+  padding: 5px 2px;
 }
 
 .builder-form {
@@ -234,12 +517,28 @@ h2 {
 }
 
 .bot-builder-layout {
+  align-items: start;
   display: grid;
   grid-gap: 18px;
   gap: 18px;
   grid-template-columns: minmax(380px, 0.9fr) minmax(420px, 1.1fr);
   margin: 0 auto;
   max-width: 1180px;
+}
+
+.bot-builder-workspace {
+  align-items: start;
+  display: grid;
+  grid-gap: 12px;
+  gap: 12px;
+  grid-template-columns: auto minmax(0, 1180px);
+  margin: 0 auto;
+  max-width: 1310px;
+}
+
+.bot-builder-workspace .bot-builder-layout {
+  margin: 0;
+  width: 100%;
 }
 
 .bot-config-panel,
@@ -315,6 +614,57 @@ h2 {
 .builder-actions {
   align-items: center;
   flex-wrap: wrap;
+}
+
+.style-file-list {
+  display: grid;
+  grid-gap: 7px;
+  gap: 7px;
+  margin: 12px 0 4px;
+}
+
+.style-file-item {
+  align-items: center;
+  background: #f8faf9;
+  border: 1px solid #d7e1e0;
+  border-radius: 7px;
+  display: grid;
+  grid-gap: 10px;
+  gap: 10px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  padding: 9px 10px;
+}
+
+.style-file-item > div {
+  min-width: 0;
+}
+
+.style-file-item strong,
+.style-file-item span {
+  display: block;
+}
+
+.style-file-item strong {
+  color: #34434a;
+  font-size: 13px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.style-file-item span {
+  color: #78868c;
+  font-size: 11px;
+  margin-top: 2px;
+}
+
+.style-file-item button {
+  background: transparent;
+  border: 0;
+  color: #9b3535;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 6px;
 }
 
 .role-grid {
@@ -428,10 +778,15 @@ h2 {
 }
 
 .bot-chat-panel {
+  align-self: start;
   display: grid;
-  grid-template-rows: auto minmax(380px, 1fr) auto auto;
+  grid-template-rows: auto minmax(0, 1fr) auto auto;
+  height: 720px;
   min-height: 720px;
   overflow: hidden;
+  position: -webkit-sticky;
+  position: sticky;
+  top: 18px;
 }
 
 .bot-chat-header {
@@ -462,10 +817,10 @@ h2 {
   display: flex;
   flex-direction: column;
   gap: 12px;
-  max-height: 560px;
-  min-height: 380px;
+  min-height: 0;
   overflow-y: auto;
   padding: 18px;
+  scroll-behavior: smooth;
 }
 
 .empty-chat-state {
@@ -545,8 +900,12 @@ h2 {
   display: grid;
   grid-gap: 10px;
   gap: 10px;
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr) auto auto;
   padding: 14px;
+}
+
+.chat-composer .speech-button {
+  min-width: 88px;
 }
 
 .chat-composer textarea {
@@ -612,6 +971,20 @@ h2 {
     grid-template-columns: 1fr;
   }
 
+  .analysis-workspace {
+    gap: 10px;
+    grid-template-columns: 1fr;
+  }
+
+  .bot-builder-workspace {
+    gap: 10px;
+    grid-template-columns: 1fr;
+  }
+
+  .transcript-history-button {
+    justify-self: start;
+  }
+
   .panel-heading,
   .action-row {
     align-items: stretch;
@@ -619,7 +992,9 @@ h2 {
   }
 
   .bot-chat-panel {
+    height: 650px;
     min-height: 620px;
+    position: static;
   }
 }
 
@@ -638,6 +1013,18 @@ h2 {
 
   .send-button {
     width: 100%;
+  }
+
+  .query-action-row {
+    grid-template-columns: 1fr;
+  }
+
+  .speech-button {
+    width: 100%;
+  }
+
+  .analysis-message {
+    max-width: 94%;
   }
 }
 
