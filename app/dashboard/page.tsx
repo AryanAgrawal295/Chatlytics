@@ -1,5 +1,5 @@
-import { Workspace } from "@/components/chat/Workspace"
+import App from "./App"
 
 export default function DashboardPage() {
-  return <Workspace />
+  return <App />
 }

@@ -1,4 +1,4 @@
-// File: /Users/aryanagrawal/Desktop/Projects/chatlytics-FINAL/app/api/bot/profile/route.ts
+// File: C:\Users\HP\Desktop\web dev\Chatlytics\app\api\bot\profile\route.ts
 import * as entry from '../../../../../../app/api/bot/profile/route.js'
 import type { NextRequest } from 'next/server.js'
 

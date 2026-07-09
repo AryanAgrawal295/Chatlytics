@@ -1,4 +1,4 @@
-// File: /Users/aryanagrawal/Desktop/Projects/chatlytics-FINAL/app/page.tsx
+// File: C:\Users\HP\Desktop\web dev\Chatlytics\app\page.tsx
 import * as entry from '../../../app/page.js'
 import type { ResolvingMetadata, ResolvingViewport } from 'next/dist/lib/metadata/types/metadata-interface.js'
 
