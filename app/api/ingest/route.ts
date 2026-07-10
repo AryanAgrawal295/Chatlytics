@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { v4 as uuidv4 } from "uuid"
-import { parseLines, semanticChunk } from "@/lib/chunker"
+import { applyChunkTags, parseLines, semanticChunk } from "@/lib/chunker"
 import { tagAllChunks } from "@/lib/tagger"
 import { embedChunks } from "@/lib/embedder"
 import { getPineconeIndex } from "@/lib/pinecone"
@@ -28,8 +28,6 @@ export async function POST(req: NextRequest) {
 
     const transcriptId = uuidv4()
 
-    // ── Phase 1: Pre-chunk to get raw text blocks for tagging ─────────────
-    // We do a rough split first to tag, then proper semantic chunk with tags
     const lines = parseLines(transcript)
     if (lines.length === 0) {
       return NextResponse.json(
@@ -41,46 +39,33 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    const roughChunks: string[] = []
-    let buffer = ""
+    const chunkDrafts = semanticChunk(transcript, transcriptId, userId)
+    console.log(`[INGEST] Created ${chunkDrafts.length} final chunks`)
 
-    for (const line of lines) {
-      buffer += `${line.speaker}: ${line.text}\n`
-      if (buffer.length > 500) {
-        roughChunks.push(buffer.trim())
-        buffer = ""
-      }
-    }
-    if (buffer.trim()) roughChunks.push(buffer.trim())
+    console.log(`[INGEST] Tagging ${chunkDrafts.length} final chunks...`)
+    const tags = await tagAllChunks(chunkDrafts.map((chunk) => chunk.text))
 
-    // ── Phase 2: Tag all rough chunks (emotion, intent, summary) ──────────
-    console.log(`[INGEST] Tagging ${roughChunks.length} chunks...`)
-    const tags = await tagAllChunks(roughChunks)
+    const smartChunks = applyChunkTags(chunkDrafts, tags)
+    console.log(`[INGEST] Built ${smartChunks.length} tagged chunks`)
 
-    // ── Phase 3: Semantic chunking with tags ──────────────────────────────
-    const smartChunks = semanticChunk(transcript, transcriptId, userId, tags)
-    console.log(`[INGEST] Created ${smartChunks.length} smart chunks`)
-
-    // ── Phase 4: Contextual embedding ─────────────────────────────────────
-    // We embed contextualText (history prefix + tags + raw text)
-    // NOT just raw text — this is what makes retrieval context-aware
     console.log(`[INGEST] Embedding ${smartChunks.length} chunks...`)
     const embeddings = await embedChunks(
-      smartChunks.map((c) => c.contextualText)
+      smartChunks.map((chunk) => chunk.contextualText)
     )
 
-    // ── Phase 5: Upsert vectors with full metadata ────────────────────────
     const vectors = smartChunks.map((chunk, i) => ({
       id: chunk.id,
       values: embeddings[i],
       metadata: {
         transcriptId: chunk.transcriptId,
         userId: chunk.userId,
-        text: chunk.text,                        // raw text for display
-        contextualText: chunk.contextualText,    // full contextual text
+        text: chunk.text,
+        contextualText: chunk.contextualText,
         speakers: chunk.speakers,
         dominantSpeaker: chunk.dominantSpeaker,
         turnIndex: chunk.turnIndex,
+        startLine: chunk.startLine,
+        endLine: chunk.endLine,
         intent: chunk.intent,
         emotion: chunk.emotion,
         topicSummary: chunk.topicSummary,
@@ -90,14 +75,11 @@ export async function POST(req: NextRequest) {
     }))
 
     const index = getPineconeIndex()
-    const BATCH = 100
-    for (let i = 0; i < vectors.length; i += BATCH) {
-      await index.upsert(vectors.slice(i, i + BATCH))
+    const batchSize = 100
+    for (let i = 0; i < vectors.length; i += batchSize) {
+      await index.upsert(vectors.slice(i, i + batchSize))
     }
 
-    // ── Phase 6: Save metadata to MongoDB ─────────────────────────────────
-    // Local previews should still be able to analyze after vectors are stored,
-    // even when Atlas rejects the developer machine's current IP.
     let metadataWarning: string | undefined
     try {
       await connectDB()
@@ -118,8 +100,8 @@ export async function POST(req: NextRequest) {
       success: true,
       transcriptId,
       chunkCount: smartChunks.length,
-      emotionsDetected: [...new Set(smartChunks.map((c) => c.emotion))],
-      intentsDetected: [...new Set(smartChunks.map((c) => c.intent))],
+      emotionsDetected: [...new Set(smartChunks.map((chunk) => chunk.emotion))],
+      intentsDetected: [...new Set(smartChunks.map((chunk) => chunk.intent))],
       warning: metadataWarning,
     })
   } catch (error) {

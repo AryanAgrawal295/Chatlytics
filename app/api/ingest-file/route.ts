@@ -1,17 +1,35 @@
 import { NextRequest, NextResponse } from "next/server"
 import { v4 as uuidv4 } from "uuid"
+import { applyChunkTags, semanticChunk } from "@/lib/chunker"
 import { detectFileType, extractFileContent } from "@/lib/fileExtractors"
-import { FileAttachmentModel } from "@/models/FileAttachment"
-// import { chunkTranscript } from "@/lib/chunker"
 import { tagAllChunks } from "@/lib/tagger"
-import { semanticChunk, parseLines } from "@/lib/chunker"
 import { embedChunks } from "@/lib/embedder"
 import { getPineconeIndex } from "@/lib/pinecone"
+import { FileAttachmentModel } from "@/models/FileAttachment"
+import { ChunkDraft } from "@/types/rag"
 import mongoose from "mongoose"
 
 async function connectDB() {
   if (mongoose.connection.readyState === 0) {
     await mongoose.connect(process.env.MONGODB_URI!)
+  }
+}
+
+function buildFallbackFileChunk(
+  transcriptId: string,
+  userId: string,
+  fileContext: string
+): ChunkDraft {
+  return {
+    id: `${transcriptId}_chunk_0`,
+    transcriptId,
+    userId,
+    text: fileContext,
+    speakers: ["File Attachment"],
+    dominantSpeaker: "File Attachment",
+    turnIndex: 0,
+    startLine: 0,
+    endLine: 0,
   }
 }
 
@@ -31,7 +49,6 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    // ── Step 1: Detect file type ───────────────────────────────────────────
     const mimeType = detectFileType(file.type, file.name)
     if (!mimeType) {
       return NextResponse.json(
@@ -40,22 +57,17 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    // ── Step 2: Convert File to Buffer ─────────────────────────────────────
     const arrayBuffer = await file.arrayBuffer()
     const buffer = Buffer.from(arrayBuffer)
 
-    // ── Step 3: Extract content using the right extractor ─────────────────
     const { extractedText, summary } = await extractFileContent(
       buffer,
       mimeType,
       file.name
     )
 
-    // ── Step 4: Format extracted text as a transcript-style context block ──
-    // This is how file content becomes part of the RAG pipeline:
-    // we label it clearly so Gemini knows it came from an attached file
     const fileContext = `
-[FILE ATTACHMENT — ${file.name} — uploaded by ${uploadedBy}]
+[FILE ATTACHMENT - ${file.name} - uploaded by ${uploadedBy}]
 Summary: ${summary}
 
 Extracted Content:
@@ -63,40 +75,24 @@ ${extractedText}
 [END OF ATTACHMENT]
 `.trim()
 
-    // ── Step 5: Run through existing RAG pipeline ──────────────────────────
-    // File content treated exactly like transcript text from here on
-    const lines = parseLines(fileContext)
-    const roughChunks: string[] = []
-    let buffer2 = ""
+    const chunkDrafts = semanticChunk(fileContext, transcriptId, userId)
+    const finalChunkDrafts =
+      chunkDrafts.length > 0
+        ? chunkDrafts
+        : [buildFallbackFileChunk(transcriptId, userId, fileContext)]
 
-    for (const line of lines) {
-      buffer2 += `${line.speaker}: ${line.text}\n`
-      if (buffer2.length > 500) {
-        roughChunks.push(buffer2.trim())
-        buffer2 = ""
-      }
-    }
+    const tags = await tagAllChunks(finalChunkDrafts.map((chunk) => chunk.text))
+    const smartChunks = applyChunkTags(finalChunkDrafts, tags)
 
-    // If file content doesn't follow speaker format, chunk as single block
-    if (roughChunks.length === 0) {
-      roughChunks.push(fileContext)
-    }
-    if (buffer2.trim()) roughChunks.push(buffer2.trim())
-
-    const tags = await tagAllChunks(roughChunks)
-    const smartChunks = semanticChunk(fileContext, transcriptId, userId, tags)
-
-    // Tag each chunk with file source for retrieval transparency
-    const fileChunks = smartChunks.map((c) => ({
-      ...c,
-      id: `${transcriptId}_file_${uuidv4().slice(0, 8)}_${c.turnIndex}`,
+    const fileChunks = smartChunks.map((chunk) => ({
+      ...chunk,
+      id: `${transcriptId}_file_${uuidv4().slice(0, 8)}_${chunk.turnIndex}`,
     }))
 
     const embeddings = await embedChunks(
-      fileChunks.map((c) => c.contextualText)
+      fileChunks.map((chunk) => chunk.contextualText)
     )
 
-    // ── Step 6: Upsert file chunks to Pinecone ─────────────────────────────
     const index = getPineconeIndex()
     const vectors = fileChunks.map((chunk, i) => ({
       id: chunk.id,
@@ -109,24 +105,24 @@ ${extractedText}
         speakers: chunk.speakers,
         dominantSpeaker: chunk.dominantSpeaker,
         turnIndex: chunk.turnIndex,
+        startLine: chunk.startLine,
+        endLine: chunk.endLine,
         intent: chunk.intent,
         emotion: chunk.emotion,
         topicSummary: chunk.topicSummary,
         isResolutionPresent: chunk.isResolutionPresent,
         isEscalation: chunk.isEscalation,
-        // Extra metadata for file chunks
         sourceType: "file_attachment",
         fileName: file.name,
         uploadedBy,
       },
     }))
 
-    const BATCH = 100
-    for (let i = 0; i < vectors.length; i += BATCH) {
-      await index.upsert(vectors.slice(i, i + BATCH))
+    const batchSize = 100
+    for (let i = 0; i < vectors.length; i += batchSize) {
+      await index.upsert(vectors.slice(i, i + batchSize))
     }
 
-    // ── Step 7: Save attachment metadata to MongoDB ────────────────────────
     await connectDB()
     const attachmentId = uuidv4()
     await FileAttachmentModel.create({
@@ -134,9 +130,14 @@ ${extractedText}
       transcriptId,
       userId,
       uploadedBy,
-      fileType: mimeType.split("/")[0] === "image" ? "image"
-        : mimeType.includes("pdf") ? "pdf"
-        : mimeType.includes("csv") ? "csv" : "excel",
+      fileType:
+        mimeType.split("/")[0] === "image"
+          ? "image"
+          : mimeType.includes("pdf")
+            ? "pdf"
+            : mimeType.includes("csv")
+              ? "csv"
+              : "excel",
       originalName: file.name,
       extractedText,
       summary,
