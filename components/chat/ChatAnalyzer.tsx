@@ -8,6 +8,7 @@ import {
   useState,
 } from "react"
 import { v4 as uuidv4 } from "uuid"
+import { Citation } from "@/types/rag"
 import { Sidebar } from "@/components/ui/Sidebar"
 import {
   ChatMessage,
@@ -42,6 +43,7 @@ type AnalysisChatMessage = {
   id: string
   sender: "user" | "assistant"
   text: string
+  citations?: Citation[]
 }
 
 type TranscriptSession = {
@@ -318,6 +320,7 @@ export function ChatAnalyzer({
         id: uuidv4(),
         sender: "assistant",
         text: data.answer || "No answer generated",
+        citations: Array.isArray(data.citations) ? data.citations : [],
       }
 
       updateCurrentSessionMessages((currentMessages) => [
@@ -469,7 +472,12 @@ export function ChatAnalyzer({
               </div>
 
               {messages.map((msg) => (
-                <ChatMessage key={msg.id} sender={msg.sender} text={msg.text} />
+                <ChatMessage
+                  key={msg.id}
+                  sender={msg.sender}
+                  text={msg.text}
+                  citations={msg.citations}
+                />
               ))}
 
               {isAnalyzing && (

@@ -1,5 +1,4 @@
 {
-  "/api/bot/profile/route": "app/api/bot/profile/route.js",
-  "/api/bot/chat/route": "app/api/bot/chat/route.js",
+  "/api/analyze/route": "app/api/analyze/route.js",
   "/dashboard/page": "app/dashboard/page.js"
 }
